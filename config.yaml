@@ -1,0 +1,25 @@
+# DDPM Training Configuration
+dataset: MNIST
+image_size: 32
+in_channels: 1
+
+# Model
+base_channels: 64
+time_dim: 256
+
+# Diffusion
+T: 1000
+beta_start: 0.0001
+beta_end: 0.02
+
+# Training
+epochs: 50
+batch_size: 64
+learning_rate: 0.0001
+num_workers: 0
+pin_memory: false
+
+# Logging
+save_every: 10
+checkpoint_dir: checkpoints/
+sample_dir: assets/samples/
