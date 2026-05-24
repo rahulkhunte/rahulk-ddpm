@@ -51,13 +51,23 @@ def train(cfg_path: str = 'config.yaml'):
     os.makedirs(cfg['checkpoint_dir'], exist_ok=True)
     os.makedirs(cfg['sample_dir'],     exist_ok=True)
 
-    transform = transforms.Compose([
-        transforms.Resize(cfg['image_size']),
-        transforms.ToTensor(),
-        transforms.Normalize((0.5,), (0.5,))
-    ])
-    dataset    = datasets.MNIST(root='data/', train=True,
-                                download=True, transform=transform)
+    ds_name = cfg.get('dataset', 'MNIST').upper()
+    if ds_name == 'CIFAR10':
+        transform = transforms.Compose([
+            transforms.Resize(cfg['image_size']),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5))
+        ])
+        dataset = datasets.CIFAR10(root='data/', train=True,
+                                   download=True, transform=transform)
+    else:
+        transform = transforms.Compose([
+            transforms.Resize(cfg['image_size']),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5,), (0.5,))
+        ])
+        dataset = datasets.MNIST(root='data/', train=True,
+                                 download=True, transform=transform)
     dataloader = DataLoader(dataset, batch_size=cfg['batch_size'],
                             shuffle=True, num_workers=cfg['num_workers'],
                             pin_memory=cfg['pin_memory'])
