@@ -9,8 +9,10 @@ time_dim: 256
 
 # Diffusion
 T: 1000
-beta_start: 0.0001
-beta_end: 0.02
+# Cosine schedule (Nichol & Dhariwal, 2021) — replaces linear beta schedule
+# ā_t = cos²((t/T + s)/(1+s) · π/2),  s=0.008 offset prevents ā_T from reaching exactly 0
+noise_schedule: cosine
+cosine_s: 0.008
 
 # Training
 epochs: 50
@@ -18,6 +20,10 @@ batch_size: 64
 learning_rate: 0.0001
 num_workers: 0
 pin_memory: false
+
+# EMA (Exponential Moving Average)
+# Standard in production diffusion pipelines — samples at inference use EMA weights
+ema_decay: 0.9999
 
 # Logging
 save_every: 10

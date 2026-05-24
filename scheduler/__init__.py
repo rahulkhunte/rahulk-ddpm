@@ -1,1 +1,1 @@
-from .noise_scheduler import LinearNoiseScheduler
+from .noise_scheduler import CosineNoiseScheduler
