@@ -205,16 +205,6 @@ python evaluate.py --ckpt checkpoints/final_ema_model.pth --fid --n_samples 1000
 
 ---
 
-## What I Learned
-
-Building DDPM from scratch forced me to actually understand the math rather than just calling `pipeline()`.  
-The reparameterization trick — why we predict ε and not x₀ directly — only clicked when I derived it from the ELBO myself.  
-The cosine schedule upgrade revealed how much the linear schedule was over-destroying structure at small t.  
-EMA made a visible difference in sample sharpness even at epoch 20.  
-The jump from UNet-DDPM to DiT was the clearest insight: when you stop thinking of images as spatial feature maps and start thinking of them as token sequences, a whole new scaling law opens up.
-
----
-
 ## References
 
 Ho, J., Jain, A., & Abbeel, P. (2020). **Denoising Diffusion Probabilistic Models**. NeurIPS 2020.  
