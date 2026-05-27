@@ -16,10 +16,10 @@ cosine_s: 0.008
 
 # Training
 epochs: 50
-batch_size: 64
+batch_size: 128
 learning_rate: 0.0001
-num_workers: 0
-pin_memory: false
+num_workers: 4
+pin_memory: true
 
 # EMA (Exponential Moving Average)
 # Standard in production diffusion pipelines — samples at inference use EMA weights
