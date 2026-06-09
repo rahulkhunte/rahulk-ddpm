@@ -20,12 +20,12 @@ No diffusers library. No pretrained weights. Just math → code → results.
 ### Forward Process — x₀ → xT (pure noise)
 ![forward](assets/forward_diffusion.png)
 
-### Training Progression
+### Training Progression (CIFAR-10)
 | Epoch 10 | Epoch 20 | Epoch 30 | Epoch 40 |
 |:--------:|:--------:|:--------:|:--------:|
 | ![e10](assets/samples/epoch_010.png) | ![e20](assets/samples/epoch_020.png) | ![e30](assets/samples/epoch_030.png) | ![e40](assets/samples/epoch_040.png) |
 
-### Final Generated Samples (Epoch 40)
+### Final Generated Samples (Epoch 40) (MNIST)
 ![final](assets/final_samples.png)
 
 ---
