@@ -191,7 +191,7 @@ python evaluate.py --ckpt checkpoints/final_ema_model.pth --fid --n_samples 1000
 
 | Config | Value |
 |--------|-------|
-| Dataset | MNIST 32×32 |
+| Dataset | MNIST 32×32, CIFAR-10 |
 | Training samples | 60,000 |
 | Diffusion steps T | 1,000 |
 | β schedule | **Cosine** (Nichol & Dhariwal, 2021) |
