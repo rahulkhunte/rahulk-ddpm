@@ -1,0 +1,42 @@
+{
+  "formulas": [
+    {
+      "id": "area_triangle",
+      "label": "Area of a Triangle",
+      "latex": "A = \\frac{1}{2} b h",
+      "latex_sha256": "05206dde952a41b39ba5e208a328c123caa8c6e7ef1dfa4cbc6f05d9d8860eb0",
+      "render": "area_triangle_worked_example/render/area_triangle.png",
+      "symbols": [
+        {
+          "id": "area",
+          "kind": "variable",
+          "name": "area",
+          "token": "A",
+          "unit": "unit²"
+        },
+        {
+          "id": "side_b",
+          "kind": "variable",
+          "name": "base",
+          "token": "b",
+          "unit": "unit"
+        },
+        {
+          "id": "height",
+          "kind": "variable",
+          "name": "height",
+          "token": "h",
+          "unit": "unit"
+        }
+      ]
+    }
+  ],
+  "frames": [
+    "area_triangle_worked_example/frames/frame_00.png",
+    "area_triangle_worked_example/frames/frame_01.png",
+    "area_triangle_worked_example/frames/frame_02.png"
+  ],
+  "gif": "area_triangle_worked_example/area_triangle_worked_example.gif",
+  "scene_id": "area_triangle_worked_example",
+  "title": "Worked Example"
+}

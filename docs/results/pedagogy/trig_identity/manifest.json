@@ -1,0 +1,8 @@
+{
+  "concept": "trigonometric identity",
+  "formula": "sin^2(x) + cos^2(x) = 1",
+  "explanation": "For any angle x, the squared sine and squared cosine add up to 1.",
+  "worked_example": "x = 0 -> 0^2 + 1^2 = 1",
+  "validator_status": "passed",
+  "device": "A10G"
+}
