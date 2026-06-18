@@ -28,6 +28,19 @@ No diffusers library. No pretrained weights. Just math → code → results.
 ### Final Generated Samples (Epoch 40) (MNIST)
 ![final](assets/final_samples.png)
 
+### Pedagogy Worked Example
+A small from-scratch pedagogy artifact pipeline is also included for rendering clean instructional outputs as reusable assets.
+
+![worked-example](assets/pedagogy/area_triangle_worked_example/area_triangle_worked_example.gif)
+
+Final render:
+![triangle](assets/pedagogy/area_triangle_worked_example/render/area_triangle.png)
+
+Supporting artifacts:
+- `assets/pedagogy/area_triangle_worked_example/manifest.json`
+- `docs/results/pedagogy/trig_identity/result.md`
+- `docs/results/pedagogy/trig_identity/manifest.json`
+
 ---
 
 ## How DDPM Works
