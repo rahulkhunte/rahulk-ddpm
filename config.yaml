@@ -29,3 +29,29 @@ ema_decay: 0.9999
 save_every: 10
 checkpoint_dir: checkpoints/
 sample_dir: assets/samples/
+
+# ── Video diffusion prototype (train_video.py / sample_video.py) ──────────────
+# Reuses top-level T / cosine_s / time_dim / ema_decay. Image pipeline above
+# is unaffected by anything under this `video:` key.
+video:
+  dataset: synthetic        # synthetic | movingmnist
+  in_channels: 1
+  num_frames: 16
+  frame_size: 32
+  num_samples: 512          # size of the synthetic dataset
+  seed: 0
+
+  # Lightweight spatiotemporal DiT
+  patch_size: 4
+  patch_t: 2
+  hidden_dim: 256
+  depth: 4
+  num_heads: 4
+
+  # Training
+  epochs: 5
+  batch_size: 8
+  learning_rate: 0.0001
+  save_every: 1
+  checkpoint_dir: checkpoints/video/
+  sample_dir: assets/video_samples/
