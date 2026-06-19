@@ -58,5 +58,9 @@ video:
   # keep weight 1 so the generative prior is not starved.
   loss_t_weighting: false
   loss_t_weight_lambda: 1.0
+  # Lower than the image pipeline's 0.9999: video runs are only a few-k steps, so
+  # a high decay leaves the EMA shadow dominated by the random init. 0.999 lets
+  # EMA track the trained weights (0.999^9600 ≈ 7e-5 init weight).
+  ema_decay: 0.999
   checkpoint_dir: checkpoints/video/
   sample_dir: assets/video_samples/

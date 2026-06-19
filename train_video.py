@@ -78,7 +78,12 @@ def train(cfg_path: str = 'config.yaml', overrides: dict = None):
 
     # ── Model / scheduler / optim ───────────────────────────────────────────────
     model     = build_model(vcfg, cfg.get('time_dim', 256), device)
-    ema       = EMA(model, decay=cfg.get('ema_decay', 0.9999))
+    # EMA decay: video runs are short (few k steps), so 0.9999 leaves the shadow
+    # weights dominated by the random init (0.9999^9600 ≈ 0.38). Allow the video
+    # config to lower it (e.g. 0.999) so EMA actually tracks the trained weights.
+    ema_decay = float(vcfg.get('ema_decay', cfg.get('ema_decay', 0.9999)))
+    ema       = EMA(model, decay=ema_decay)
+    print(f"EMA decay: {ema_decay}", flush=True)
     scheduler = CosineNoiseScheduler(cfg['T'], s=cfg.get('cosine_s', 0.008), device=device)
     optimizer = torch.optim.Adam(model.parameters(), lr=vcfg.get('learning_rate', 1e-4))
     criterion = nn.MSELoss()
@@ -184,6 +189,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_frames',  type=int, default=None)
     parser.add_argument('--frame_size',  type=int, default=None)
     parser.add_argument('--save_every',  type=int, default=None)
+    parser.add_argument('--ema_decay',   type=float, default=None)
     parser.add_argument('--loss_t_weighting', dest='loss_t_weighting',
                         action='store_true', default=None,
                         help='emphasise low/mid-t steps in the loss')
@@ -197,6 +203,7 @@ if __name__ == '__main__':
         'num_frames':  args.num_frames,
         'frame_size':  args.frame_size,
         'save_every':  args.save_every,
+        'ema_decay':   args.ema_decay,
         'loss_t_weighting': args.loss_t_weighting,
     }
     train(args.cfg, overrides)

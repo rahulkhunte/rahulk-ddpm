@@ -40,12 +40,13 @@ def run_train():
     cmd = [
         "python",
         "train_video.py",
-        "--epochs", "150",
+        "--epochs", "400",
         "--num_samples", "512",
         "--batch_size", "8",
         "--num_frames", "16",
         "--frame_size", "32",
-        "--save_every", "30",
+        "--save_every", "50",
+        "--ema_decay", "0.999",      # 0.9999 leaves EMA ~38% random init at this length
         "--loss_t_weighting",
     ]
 
