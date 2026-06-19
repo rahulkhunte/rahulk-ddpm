@@ -71,7 +71,7 @@ def train(cfg_path: str = 'config.yaml', overrides: dict = None):
     dataset = build_video_dataset({'video': vcfg})
     dataloader = DataLoader(dataset, batch_size=vcfg.get('batch_size', 8),
                             shuffle=True, num_workers=cfg.get('num_workers', 4),
-                            pin_memory=cfg.get('pin_memory', False))
+                            pin_memory=cfg.get('pin_memory', False) and device == 'cuda')
     print(f"Dataset: {vcfg.get('dataset', 'synthetic')}  |  {len(dataset)} clips  |  "
           f"shape (C={vcfg.get('in_channels',1)}, T={vcfg.get('num_frames',16)}, "
           f"{vcfg.get('frame_size',32)}x{vcfg.get('frame_size',32)})", flush=True)
