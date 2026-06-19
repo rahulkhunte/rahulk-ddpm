@@ -205,3 +205,9 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# rahulk-ddpm: large model weights — keep on a Modal volume / HF Hub, never git
+checkpoints/
+*.pth
+# local-only diagnostic artifacts pulled back from Modal
+assets/video_samples_modal/

@@ -53,5 +53,10 @@ video:
   batch_size: 8
   learning_rate: 0.0001
   save_every: 1
+  # Low-t loss weighting: w(t) = 1 + lambda*(1 - t/T), mean-normalised. Emphasises
+  # the low/mid-noise steps where the moving square is reconstructed; high-t steps
+  # keep weight 1 so the generative prior is not starved.
+  loss_t_weighting: false
+  loss_t_weight_lambda: 1.0
   checkpoint_dir: checkpoints/video/
   sample_dir: assets/video_samples/
