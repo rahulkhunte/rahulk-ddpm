@@ -99,7 +99,15 @@ def train(cfg_path: str = 'config.yaml', overrides: dict = None):
     # unchanged. High-t steps keep weight 1 (no starvation of the prior).
     t_weighting = vcfg.get('loss_t_weighting', False)
     t_weight_lambda = float(vcfg.get('loss_t_weight_lambda', 1.0))
-    if t_weighting:
+    # min-SNR-gamma weighting (Hang et al. 2023): for eps-prediction, scales the
+    # per-sample loss by min(SNR,gamma)/SNR. Down-weights easy low-noise steps and
+    # keeps full weight on high-noise steps — the regime where structure must be
+    # nucleated from pure noise. Takes precedence over low-t weighting if set.
+    min_snr_gamma = vcfg.get('min_snr_gamma', None)
+    if min_snr_gamma is not None:
+        min_snr_gamma = float(min_snr_gamma)
+        print(f"Loss weighting: min-SNR-gamma (gamma={min_snr_gamma})", flush=True)
+    elif t_weighting:
         print(f"Loss t-weighting ON  (lambda={t_weight_lambda}, low-t emphasised)", flush=True)
     losses    = []
 
@@ -114,7 +122,13 @@ def train(cfg_path: str = 'config.yaml', overrides: dict = None):
 
             xt   = add_video_noise(scheduler, videos, noise, t)
             pred = model(xt, t)
-            if t_weighting:
+            if min_snr_gamma is not None:
+                per_sample = ((pred - noise) ** 2).flatten(1).mean(dim=1)   # (B,)
+                snr = scheduler.alpha_bar[t] / (1.0 - scheduler.alpha_bar[t])
+                w = torch.clamp(snr, max=min_snr_gamma) / snr               # min-SNR
+                w = w / w.mean()
+                loss = (w * per_sample).mean()
+            elif t_weighting:
                 per_sample = ((pred - noise) ** 2).flatten(1).mean(dim=1)   # (B,)
                 w = 1.0 + t_weight_lambda * (1.0 - t.float() / cfg['T'])
                 w = w / w.mean()                                            # keep scale
@@ -190,6 +204,8 @@ if __name__ == '__main__':
     parser.add_argument('--frame_size',  type=int, default=None)
     parser.add_argument('--save_every',  type=int, default=None)
     parser.add_argument('--ema_decay',   type=float, default=None)
+    parser.add_argument('--min_snr_gamma', type=float, default=None,
+                        help='min-SNR-gamma loss weighting (e.g. 5); emphasises high-t')
     parser.add_argument('--loss_t_weighting', dest='loss_t_weighting',
                         action='store_true', default=None,
                         help='emphasise low/mid-t steps in the loss')
@@ -204,6 +220,7 @@ if __name__ == '__main__':
         'frame_size':  args.frame_size,
         'save_every':  args.save_every,
         'ema_decay':   args.ema_decay,
+        'min_snr_gamma': args.min_snr_gamma,
         'loss_t_weighting': args.loss_t_weighting,
     }
     train(args.cfg, overrides)

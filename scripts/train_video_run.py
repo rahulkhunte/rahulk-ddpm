@@ -47,7 +47,7 @@ def run_train():
         "--frame_size", "32",
         "--save_every", "50",
         "--ema_decay", "0.999",      # 0.9999 leaves EMA ~38% random init at this length
-        "--loss_t_weighting",
+        "--min_snr_gamma", "5.0",    # emphasise high-t (nucleation-from-noise) steps
     ]
 
     result = subprocess.run(cmd, check=True, text=True, capture_output=True)
