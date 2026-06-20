@@ -28,6 +28,19 @@ No diffusers library. No pretrained weights. Just math → code → results.
 ### Final Generated Samples (Epoch 40) (MNIST)
 ![final](assets/final_samples.png)
 
+### Video Diffusion — VideoDiT (moving square from pure noise)
+A spatiotemporal Diffusion Transformer (`model/video_dit.py`) extends the DDPM to video. Trained on synthetic moving-square clips and conditioned on the square's trajectory via AdaLN, it generates **temporally-coherent moving squares from pure Gaussian noise**:
+
+| Generated sample 0 | Generated sample 1 |
+|:------------------:|:------------------:|
+| ![vid0](assets/demo/videodit_sample_0.gif) | ![vid1](assets/demo/videodit_sample_1.gif) |
+
+Ground truth (even rows) vs generated-from-noise (odd rows) — 16 frames each:
+
+![videodit](assets/demo/videodit_gt_vs_generated.png)
+
+Getting structure to nucleate from pure noise required fixing the reverse sampler: at the top of the chain `β_t≈0.999` makes `1/√α_t≈31×`, which amplifies any DC bias in the ε prediction into a saturated constant field. Reconstructing and **clamping x̂₀ each step** (static thresholding, `scheduler/noise_scheduler.py`) removes the collapse. See [`train_video.py`](train_video.py) / [`sample_video.py`](sample_video.py).
+
 ### Pedagogy Worked Example
 A small from-scratch pedagogy artifact pipeline is also included for rendering clean instructional outputs as reusable assets.
 
