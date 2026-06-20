@@ -48,6 +48,7 @@ def build_model(vcfg, time_dim, device):
         depth=vcfg.get('depth', 4),
         num_heads=vcfg.get('num_heads', 4),
         time_dim=time_dim,
+        cond_features=vcfg.get('cond_features', 0),
     ).to(device)
 
 
@@ -115,13 +116,17 @@ def train(cfg_path: str = 'config.yaml', overrides: dict = None):
         model.train()
         epoch_loss = 0.0
 
-        for videos, _ in dataloader:
+        for videos, y in dataloader:
             videos = videos.to(device)                       # (B, C, T, H, W)
             t      = torch.randint(0, cfg['T'], (videos.size(0),), device=device)
             noise  = torch.randn_like(videos)
+            # Conditioning vector (B, cond_features) when the synthetic dataset
+            # provides one and the model was built conditional; else unconditional.
+            y_cond = y.to(device).float() if (model.cond_features > 0
+                                              and torch.is_tensor(y) and y.dim() == 2) else None
 
             xt   = add_video_noise(scheduler, videos, noise, t)
-            pred = model(xt, t)
+            pred = model(xt, t, y_cond)
             if min_snr_gamma is not None:
                 per_sample = ((pred - noise) ** 2).flatten(1).mean(dim=1)   # (B,)
                 snr = scheduler.alpha_bar[t] / (1.0 - scheduler.alpha_bar[t])
@@ -172,10 +177,17 @@ def _save_video_samples(model, scheduler, device, cfg, vcfg, sample_dir, epoch, 
     S = vcfg.get('frame_size', 32)
     cmap = 'gray' if C == 1 else None
 
+    # When conditional, sample with in-distribution attribute vectors pulled
+    # straight from the dataset (guaranteed valid trajectories).
+    y_cond = None
+    if getattr(model, 'cond_features', 0) > 0:
+        ds = build_video_dataset({'video': vcfg})
+        y_cond = torch.stack([ds[i][1] for i in range(n)]).to(device).float()
+
     x = torch.randn(n, C, T, S, S, device=device)
     for t_val in reversed(range(cfg['T'])):
         t_t = torch.full((n,), t_val, device=device, dtype=torch.long)
-        x   = scheduler.sample_prev_timestep(x, model(x, t_t), t_val)
+        x   = scheduler.sample_prev_timestep(x, model(x, t_t, y_cond), t_val)
 
     vids = ((x.clamp(-1, 1) + 1) / 2).cpu()              # (n, C, T, S, S) in [0,1]
 

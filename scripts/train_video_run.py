@@ -33,11 +33,13 @@ def run_train():
     os.chdir("/root/rahulk-ddpm")
 
     # Real prototype run (SETUP.md Phase 2): coherent moving square.
-    # Data fix: the synthetic square is now 40–50% of the frame (was ~1.6–8% of
-    # pixels). Loss reweighting (low-t, uniform, min-SNR-γ) all collapsed to a
-    # constant background because the foreground was too rare to model — proven
-    # not to be the lever. With a prominent foreground we go back to UNIFORM t
-    # (no weighting) to isolate whether the rarity was the cause.
+    # CONDITIONING fix (cond_features=6 in config.yaml). Diagnosis: the model
+    # recovers a square from any partial-noise level but collapses from PURE
+    # noise (failure isolated to t≈950–999) — it can't break symmetry and decide
+    # WHERE to place the square. Loss reweighting and foreground size were both
+    # ruled out. Feeding the trajectory attributes (start pos/vel/size/colour)
+    # via DiT AdaLN gives the top-of-chain the spatial info it lacks, so it can
+    # nucleate. Uniform t, ema 0.999.
     # save_every=50 keeps cost down: each save runs a full T=1000 reverse sample.
     cmd = [
         "python",

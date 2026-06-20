@@ -35,7 +35,8 @@ class VideoDiT(nn.Module):
                  hidden_dim:  int = 256,
                  depth:       int = 4,
                  num_heads:   int = 4,
-                 time_dim:    int = 256):
+                 time_dim:    int = 256,
+                 cond_features: int = 0):
         super().__init__()
         assert image_size % patch_size == 0, "image_size must be divisible by patch_size"
         assert num_frames % patch_t     == 0, "num_frames must be divisible by patch_t"
@@ -60,6 +61,24 @@ class VideoDiT(nn.Module):
 
         # Timestep conditioning (reused sinusoidal embedding + MLP, → time_dim)
         self.time_embed = SinusoidalTimeEmbedding(time_dim)
+
+        # Optional label conditioning (DiT-style): embed a continuous attribute
+        # vector y (e.g. the square's start position / velocity / size) and ADD
+        # it to the timestep embedding, exactly as DiT adds a class embedding.
+        # This is what lets the model nucleate structure from pure noise: at the
+        # top of the chain (t≈T) the timestep signal carries no spatial info, so
+        # the label tells the model WHERE to place the square — breaking the
+        # symmetry an unconditional model cannot. The second Linear is zero-init
+        # so training starts identical to the unconditional baseline (stable).
+        self.cond_features = cond_features
+        if cond_features > 0:
+            self.label_embed = nn.Sequential(
+                nn.Linear(cond_features, time_dim),
+                nn.SiLU(),
+                nn.Linear(time_dim, time_dim),
+            )
+            nn.init.zeros_(self.label_embed[-1].weight)
+            nn.init.zeros_(self.label_embed[-1].bias)
 
         # Transformer trunk — reuse the image DiT block, conditioned on t
         self.blocks = nn.ModuleList([
@@ -91,14 +110,19 @@ class VideoDiT(nn.Module):
         x = x.reshape(B, C, T, H, W)
         return x
 
-    def forward(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, t: torch.Tensor,
+                y: torch.Tensor = None) -> torch.Tensor:
         """
         x: noisy video (B, C, T, H, W)
         t: diffusion timestep (B,)
+        y: optional conditioning attributes (B, cond_features); ignored if the
+           model was built without conditioning.
         Returns: predicted noise ε_θ (B, C, T, H, W)
         """
         B, C, T, H, W = x.shape
         cond = self.time_embed(t)              # (B, time_dim)
+        if self.cond_features > 0 and y is not None:
+            cond = cond + self.label_embed(y)  # DiT class-conditioning: t + label
 
         tokens = self.patchify(x)              # (B, N, patch_dim)
         tokens = self.patch_embed(tokens)      # (B, N, hidden_dim)

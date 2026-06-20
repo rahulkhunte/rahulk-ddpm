@@ -47,6 +47,11 @@ video:
   hidden_dim: 256
   depth: 4
   num_heads: 4
+  # Label conditioning (DiT AdaLN). 6 = [start_y, start_x, vy, vx, size, color],
+  # the synthetic square's trajectory attributes. Tells the model WHERE to place
+  # the square at the top of the diffusion chain so it nucleates from pure noise
+  # instead of collapsing to a constant background. 0 = unconditional.
+  cond_features: 6
 
   # Training
   epochs: 5

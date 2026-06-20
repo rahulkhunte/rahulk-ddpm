@@ -64,6 +64,22 @@ class SyntheticMovingShapes(Dataset):
         else:
             color = np.array([rng.uniform(0.7, 1.0)], dtype=np.float32)
 
+        # Conditioning vector (6 scalars, ~[-1,1]): start position, velocity,
+        # size and brightness. The bounce dynamics make the whole clip a
+        # deterministic function of these, so feeding them to the model (DiT
+        # AdaLN) tells it WHERE/HOW the square moves — exactly the information an
+        # unconditional model lacks at the top of the diffusion chain, where it
+        # otherwise collapses to a constant background instead of nucleating a
+        # square. Normalisation must match between training and sampling.
+        cond = np.array([
+            2.0 * pos[0] / S - 1.0,
+            2.0 * pos[1] / S - 1.0,
+            vel[0] / 2.5,
+            vel[1] / 2.5,
+            2.0 * size / S - 1.0,
+            2.0 * float(color.mean()) - 1.0,
+        ], dtype=np.float32)
+
         frames = np.zeros((T, self.in_channels, S, S), dtype=np.float32)
         for f in range(T):
             y, x = pos
@@ -84,7 +100,7 @@ class SyntheticMovingShapes(Dataset):
         video = torch.from_numpy(frames)            # (T, C, H, W) in [0,1]
         video = video.permute(1, 0, 2, 3).contiguous()   # (C, T, H, W)
         video = video * 2.0 - 1.0                   # → [-1, 1]
-        return video, 0
+        return video, torch.from_numpy(cond)
 
 
 class MovingMNISTVideo(Dataset):

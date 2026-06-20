@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 from model.video_dit import VideoDiT
 from scheduler       import CosineNoiseScheduler
 from train_video     import build_model
+from datasets.video_dataset import build_video_dataset
 
 
 @torch.no_grad()
@@ -46,10 +47,17 @@ def sample(ckpt: str, cfg_path: str = 'config.yaml', n: int = 4,
     sample_dir = vcfg.get('sample_dir', 'assets/video_samples/')
     os.makedirs(sample_dir, exist_ok=True)
 
+    # Conditional sampling: pull in-distribution attribute vectors from the
+    # dataset so the model knows which square trajectory to nucleate.
+    y_cond = None
+    if getattr(model, 'cond_features', 0) > 0:
+        ds = build_video_dataset({'video': vcfg})
+        y_cond = torch.stack([ds[i][1] for i in range(n)]).to(device).float()
+
     x = torch.randn(n, C, T, S, S, device=device)
     for t_val in reversed(range(cfg['T'])):
         t_t = torch.full((n,), t_val, device=device, dtype=torch.long)
-        x   = scheduler.sample_prev_timestep(x, model(x, t_t), t_val)
+        x   = scheduler.sample_prev_timestep(x, model(x, t_t, y_cond), t_val)
 
     vids = ((x.clamp(-1, 1) + 1) / 2).cpu()              # (n, C, T, S, S) in [0,1]
 
