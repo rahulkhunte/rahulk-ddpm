@@ -35,10 +35,14 @@ def run_train():
     # MovingMNIST run (UNCONDITIONAL): can a 7M DiT generate recognizable moving
     # digits from pure noise now that the x0-clamp sampler is fixed (commit
     # 45b0204)? cond_features=0 forces unconditional (config default is 6).
-    # depth 6 (config), 4096-clip subset, batch 64, 600 epochs. data_root points
-    # at the persisted volume so the ~0.8GB MovingMNIST download is cached across
-    # runs. Foreground (digits) is ~5% of pixels — if the model collapses to a
-    # constant field, that's the signal to add trajectory conditioning next.
+    #
+    # Compute is sized to the EXACT profile that completed for the synthetic run
+    # (2048 clips x batch 32 x 600 epochs = 38,400 steps = 1.23M sample-forwards).
+    # Earlier MovingMNIST attempts at 4096 clips / batch 64 = 2.46M forwards were
+    # ~2x that compute and overran the timeout. depth 6 (config). data_root on
+    # the persisted volume caches the ~0.8GB download. Foreground (digits) is ~5%
+    # of pixels — if it collapses to a constant field, that's the signal to add
+    # trajectory conditioning next.
     cmd = [
         "python",
         "train_video.py",
@@ -46,8 +50,8 @@ def run_train():
         "--data_root", "/outputs/data",
         "--cond_features", "0",      # unconditional
         "--epochs", "600",
-        "--num_samples", "4096",
-        "--batch_size", "64",
+        "--num_samples", "2048",
+        "--batch_size", "32",
         "--num_frames", "16",
         "--frame_size", "32",
         "--save_every", "100",
