@@ -48,7 +48,14 @@ class SyntheticMovingShapes(Dataset):
         S   = self.image_size
         T   = self.num_frames
 
-        size = rng.randint(max(3, S // 8), max(4, S // 3))   # square side
+        # Square side = 40–50% of the frame (≈16–25% of pixels). The earlier
+        # 1/8–1/3 range (~1.6–8% of pixels) made the foreground so rare that an
+        # unconditional VideoDiT minimised the loss by predicting a constant
+        # background and never nucleated a square from pure noise. A prominent
+        # foreground gives the generative prior a strong, learnable mode.
+        lo   = max(4, int(round(0.40 * S)))
+        hi   = max(lo + 1, int(round(0.50 * S)) + 1)
+        size = rng.randint(lo, hi)                           # square side
         pos  = rng.uniform(0, S - size, size=2)              # (y, x)
         vel  = rng.uniform(-2.5, 2.5, size=2)                # (vy, vx)
 

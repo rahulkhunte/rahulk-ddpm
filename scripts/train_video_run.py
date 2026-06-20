@@ -33,10 +33,12 @@ def run_train():
     os.chdir("/root/rahulk-ddpm")
 
     # Real prototype run (SETUP.md Phase 2): coherent moving square.
-    # 150 epochs so the generative prior forms (the 5-epoch run learned to refine
-    # existing structure but never nucleated a square from pure noise). Low-t loss
-    # weighting accelerates that. save_every=30 keeps cost down: each save runs a
-    # full T=1000 reverse sampling, so we sample only ~5 times, not every epoch.
+    # Data fix: the synthetic square is now 40–50% of the frame (was ~1.6–8% of
+    # pixels). Loss reweighting (low-t, uniform, min-SNR-γ) all collapsed to a
+    # constant background because the foreground was too rare to model — proven
+    # not to be the lever. With a prominent foreground we go back to UNIFORM t
+    # (no weighting) to isolate whether the rarity was the cause.
+    # save_every=50 keeps cost down: each save runs a full T=1000 reverse sample.
     cmd = [
         "python",
         "train_video.py",
@@ -47,7 +49,6 @@ def run_train():
         "--frame_size", "32",
         "--save_every", "50",
         "--ema_decay", "0.999",      # 0.9999 leaves EMA ~38% random init at this length
-        "--min_snr_gamma", "5.0",    # emphasise high-t (nucleation-from-noise) steps
     ]
 
     result = subprocess.run(cmd, check=True, text=True, capture_output=True)
