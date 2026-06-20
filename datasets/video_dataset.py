@@ -111,17 +111,21 @@ class MovingMNISTVideo(Dataset):
     """
 
     def __init__(self,
-                 root:       str = 'data/',
-                 num_frames: int = 16,
-                 image_size: int = 32,
-                 download:   bool = True):
+                 root:        str = 'data/',
+                 num_frames:  int = 16,
+                 image_size:  int = 32,
+                 download:    bool = True,
+                 num_samples: int = None):
         from torchvision.datasets import MovingMNIST
         self.base       = MovingMNIST(root=root, download=download)
         self.num_frames = num_frames
         self.image_size = image_size
+        # Optional cap so a "decent subset" can be used for a bounded-cost run
+        # instead of all 10k sequences (keeps epochs/steps within the GPU budget).
+        self.length = len(self.base) if num_samples is None else min(num_samples, len(self.base))
 
     def __len__(self) -> int:
-        return len(self.base)
+        return self.length
 
     def __getitem__(self, idx: int):
         clip = self.base[idx]
@@ -171,6 +175,7 @@ def build_video_dataset(cfg: dict) -> Dataset:
             num_frames=v.get('num_frames', 16),
             image_size=v.get('frame_size', 32),
             download=v.get('download', True),
+            num_samples=v.get('num_samples', None),
         )
 
     return SyntheticMovingShapes(

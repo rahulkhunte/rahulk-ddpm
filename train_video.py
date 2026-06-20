@@ -216,6 +216,9 @@ if __name__ == '__main__':
     parser.add_argument('--frame_size',  type=int, default=None)
     parser.add_argument('--save_every',  type=int, default=None)
     parser.add_argument('--ema_decay',   type=float, default=None)
+    parser.add_argument('--cond_features', type=int, default=None,
+                        help='label-conditioning dim; 0 = unconditional')
+    parser.add_argument('--data_root',   default=None, help='dataset root (e.g. a persisted volume path)')
     parser.add_argument('--min_snr_gamma', type=float, default=None,
                         help='min-SNR-gamma loss weighting (e.g. 5); emphasises high-t')
     parser.add_argument('--loss_t_weighting', dest='loss_t_weighting',
@@ -234,5 +237,7 @@ if __name__ == '__main__':
         'ema_decay':   args.ema_decay,
         'min_snr_gamma': args.min_snr_gamma,
         'loss_t_weighting': args.loss_t_weighting,
+        'cond_features': args.cond_features,
+        'data_root':   args.data_root,
     }
     train(args.cfg, overrides)

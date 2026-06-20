@@ -32,20 +32,22 @@ def run_train():
 
     os.chdir("/root/rahulk-ddpm")
 
-    # Quality run (SETUP.md Phase 2): SHARPEN the moving square.
-    # The collapse blocker is fixed (x0-clamp sampler, commit 45b0204) — the
-    # earlier model already nucleates a MOVING foreground from pure noise, but
-    # the shapes were blobby clusters, not crisp squares. That's capacity/length,
-    # not the blocker. So: deeper (depth 4->6 in config), more data (512->2048),
-    # bigger batch (8->32) and longer (400->600 epochs). Conditioning (cond_
-    # features=6) + uniform t + ema 0.999 retained. save_every=100 keeps cost
-    # down: each save runs a full T=1000 reverse sample (now the fixed sampler).
+    # MovingMNIST run (UNCONDITIONAL): can a 7M DiT generate recognizable moving
+    # digits from pure noise now that the x0-clamp sampler is fixed (commit
+    # 45b0204)? cond_features=0 forces unconditional (config default is 6).
+    # depth 6 (config), 4096-clip subset, batch 64, 600 epochs. data_root points
+    # at the persisted volume so the ~0.8GB MovingMNIST download is cached across
+    # runs. Foreground (digits) is ~5% of pixels — if the model collapses to a
+    # constant field, that's the signal to add trajectory conditioning next.
     cmd = [
         "python",
         "train_video.py",
+        "--dataset", "movingmnist",
+        "--data_root", "/outputs/data",
+        "--cond_features", "0",      # unconditional
         "--epochs", "600",
-        "--num_samples", "2048",
-        "--batch_size", "32",
+        "--num_samples", "4096",
+        "--batch_size", "64",
         "--num_frames", "16",
         "--frame_size", "32",
         "--save_every", "100",
