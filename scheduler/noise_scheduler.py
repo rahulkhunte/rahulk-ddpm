@@ -49,14 +49,46 @@ class CosineNoiseScheduler:
 
     # ── reverse step ─────────────────────────────────────────────────────────
     def sample_prev_timestep(self, xt: torch.Tensor, noise_pred: torch.Tensor,
-                              t: int) -> torch.Tensor:
+                              t: int, clip_x0: bool = True) -> torch.Tensor:
         """
-        μ_θ(x_t, t) = (1/√α_t) · (x_t - β_t/√(1-ᾱ_t) · ε_θ)
-        Sample: x_{t-1} = μ_θ + σ_t · z,  z ~ N(0,I)  (σ_t = √β_t)
+        Posterior reverse step p_θ(x_{t-1} | x_t).
+
+        Default path (clip_x0=True) reconstructs x̂_0 from ε, clamps it to the
+        data range [-1, 1] (static thresholding), then uses the true forward
+        posterior q(x_{t-1} | x_t, x̂_0):
+            x̂_0 = (x_t - √(1-ᾱ_t)·ε_θ) / √ᾱ_t,            clamped to [-1, 1]
+            μ   = (√ᾱ_{t-1}·β_t)/(1-ᾱ_t)·x̂_0
+                + (√α_t·(1-ᾱ_{t-1}))/(1-ᾱ_t)·x_t
+            σ²  = (1-ᾱ_{t-1})/(1-ᾱ_t)·β_t                  (β̃_t, the posterior var)
+
+        Why the clamp matters: at the top of the chain β_t is clamped to 0.999,
+        so α_t≈1e-3 and 1/√α_t≈31×. In the unclamped ε-form mean below, any small
+        DC bias in ε_θ is amplified ~31× per step and, over the ~50 highest-t
+        steps, drives the whole field to a saturated constant (all-black/all-white
+        collapse) instead of nucleating structure from pure noise. Clamping x̂_0
+        each step removes that runaway. See Nichol & Dhariwal (2021), Ho et al.
+        Algorithm 2; static thresholding is standard in production samplers.
+
+        clip_x0=False keeps the original ε-form mean with σ_t=√β_t, retained for
+        reference / ablation.
         """
         alpha_t = self.alphas[t]
         beta_t  = self.betas[t]
 
+        if clip_x0:
+            ab_t    = self.alpha_bar[t]
+            ab_prev = self.alpha_bar[t - 1] if t > 0 else torch.ones_like(ab_t)
+            x0_hat  = (xt - self.sqrt_one_minus_ab[t] * noise_pred) / self.sqrt_alpha_bar[t]
+            x0_hat  = x0_hat.clamp(-1.0, 1.0)
+            coef_x0 = torch.sqrt(ab_prev) * beta_t / (1.0 - ab_t)
+            coef_xt = torch.sqrt(alpha_t) * (1.0 - ab_prev) / (1.0 - ab_t)
+            mean    = coef_x0 * x0_hat + coef_xt * xt
+            if t == 0:
+                return mean
+            var     = (1.0 - ab_prev) / (1.0 - ab_t) * beta_t
+            return mean + torch.sqrt(var) * torch.randn_like(xt)
+
+        # Original ε-form (σ_t = √β_t), no x̂_0 clamp — kept for ablation.
         mean = (1.0 / torch.sqrt(alpha_t)) * (
             xt - (beta_t / self.sqrt_one_minus_ab[t]) * noise_pred
         )
