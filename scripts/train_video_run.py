@@ -22,7 +22,7 @@ image = (
 @app.function(
     image=image,
     gpu="A10G",
-    timeout=60 * 30,
+    timeout=60 * 90,          # longer/bigger run needs more than the 30-min default
     volumes={"/outputs": outputs},
 )
 def run_train():
@@ -32,24 +32,23 @@ def run_train():
 
     os.chdir("/root/rahulk-ddpm")
 
-    # Real prototype run (SETUP.md Phase 2): coherent moving square.
-    # CONDITIONING fix (cond_features=6 in config.yaml). Diagnosis: the model
-    # recovers a square from any partial-noise level but collapses from PURE
-    # noise (failure isolated to t≈950–999) — it can't break symmetry and decide
-    # WHERE to place the square. Loss reweighting and foreground size were both
-    # ruled out. Feeding the trajectory attributes (start pos/vel/size/colour)
-    # via DiT AdaLN gives the top-of-chain the spatial info it lacks, so it can
-    # nucleate. Uniform t, ema 0.999.
-    # save_every=50 keeps cost down: each save runs a full T=1000 reverse sample.
+    # Quality run (SETUP.md Phase 2): SHARPEN the moving square.
+    # The collapse blocker is fixed (x0-clamp sampler, commit 45b0204) — the
+    # earlier model already nucleates a MOVING foreground from pure noise, but
+    # the shapes were blobby clusters, not crisp squares. That's capacity/length,
+    # not the blocker. So: deeper (depth 4->6 in config), more data (512->2048),
+    # bigger batch (8->32) and longer (400->600 epochs). Conditioning (cond_
+    # features=6) + uniform t + ema 0.999 retained. save_every=100 keeps cost
+    # down: each save runs a full T=1000 reverse sample (now the fixed sampler).
     cmd = [
         "python",
         "train_video.py",
-        "--epochs", "400",
-        "--num_samples", "512",
-        "--batch_size", "8",
+        "--epochs", "600",
+        "--num_samples", "2048",
+        "--batch_size", "32",
         "--num_frames", "16",
         "--frame_size", "32",
-        "--save_every", "50",
+        "--save_every", "100",
         "--ema_decay", "0.999",      # 0.9999 leaves EMA ~38% random init at this length
     ]
 

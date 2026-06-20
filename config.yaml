@@ -45,7 +45,7 @@ video:
   patch_size: 4
   patch_t: 2
   hidden_dim: 256
-  depth: 4
+  depth: 6
   num_heads: 4
   # Label conditioning (DiT AdaLN). 6 = [start_y, start_x, vy, vx, size, color],
   # the synthetic square's trajectory attributes. Tells the model WHERE to place
