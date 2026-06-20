@@ -22,7 +22,7 @@ image = (
 @app.function(
     image=image,
     gpu="A10G",
-    timeout=60 * 90,          # longer/bigger run needs more than the 30-min default
+    timeout=60 * 120,         # MovingMNIST run headroom (download + 38k steps)
     volumes={"/outputs": outputs},
 )
 def run_train():

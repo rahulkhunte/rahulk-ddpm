@@ -122,13 +122,16 @@ class MovingMNISTVideo(Dataset):
         self.image_size = image_size
         # Optional cap so a "decent subset" can be used for a bounded-cost run
         # instead of all 10k sequences (keeps epochs/steps within the GPU budget).
-        self.length = len(self.base) if num_samples is None else min(num_samples, len(self.base))
+        length = len(self.base) if num_samples is None else min(num_samples, len(self.base))
 
-    def __len__(self) -> int:
-        return self.length
+        # Pre-process every clip ONCE into an in-memory cache (C,T,H,W in [-1,1]).
+        # The frame-subsample + bilinear resize (64→32) is expensive; doing it
+        # per __getitem__ ran ~2.4M times over a 600-epoch run and starved the
+        # GPU (the run hit the wall-clock timeout). 4096 clips ≈ 268 MB — fine.
+        clips = [self._process(self.base[i]) for i in range(length)]
+        self.clips = torch.stack(clips)          # (N, C, T, H, W)
 
-    def __getitem__(self, idx: int):
-        clip = self.base[idx]
+    def _process(self, clip) -> torch.Tensor:
         if isinstance(clip, (tuple, list)):
             clip = clip[0]
         clip = torch.as_tensor(clip).float()
@@ -157,8 +160,13 @@ class MovingMNISTVideo(Dataset):
                                  mode='bilinear', align_corners=False)
             clip = clip.reshape(c, t, self.image_size, self.image_size)
 
-        clip = clip / 255.0 * 2.0 - 1.0          # uint8 range → [-1, 1]
-        return clip, 0
+        return clip / 255.0 * 2.0 - 1.0          # uint8 range → [-1, 1]
+
+    def __len__(self) -> int:
+        return self.clips.shape[0]
+
+    def __getitem__(self, idx: int):
+        return self.clips[idx], 0
 
 
 def build_video_dataset(cfg: dict) -> Dataset:
