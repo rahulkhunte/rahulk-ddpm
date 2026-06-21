@@ -25,7 +25,7 @@ from datasets.video_dataset import build_video_dataset
 
 @torch.no_grad()
 def sample(ckpt: str, cfg_path: str = 'config.yaml', n: int = 4,
-           save_gif: bool = True, overrides: dict = None):
+           save_gif: bool = True, overrides: dict = None, tag: str = ''):
     with open(cfg_path) as f:
         cfg = yaml.safe_load(f)
     vcfg = dict(cfg.get('video', {}))
@@ -72,7 +72,7 @@ def sample(ckpt: str, cfg_path: str = 'config.yaml', n: int = 4,
             axes[i, f].axis('off')
     plt.suptitle('VideoDiT — generated clips', fontsize=12)
     plt.tight_layout()
-    grid_path = f"{sample_dir}final_grid.png"
+    grid_path = f"{sample_dir}{tag}final_grid.png"
     plt.savefig(grid_path, dpi=150)
     plt.close('all')
     print(f"Saved {grid_path}")
@@ -89,7 +89,7 @@ def sample(ckpt: str, cfg_path: str = 'config.yaml', n: int = 4,
                 arr = (arr.permute(1, 2, 0).numpy() * 255).astype('uint8')
                 im  = Image.fromarray(arr, mode='RGB')
             frames.append(im.resize((128, 128), Image.NEAREST))
-        gif_path = f"{sample_dir}sample.gif"
+        gif_path = f"{sample_dir}{tag}sample.gif"
         frames[0].save(gif_path, save_all=True, append_images=frames[1:],
                        duration=120, loop=0)
         print(f"Saved {gif_path} ({len(frames)} frames)")
@@ -101,14 +101,22 @@ if __name__ == '__main__':
     parser.add_argument('--cfg',    default='config.yaml')
     parser.add_argument('--n',      type=int, default=4)
     parser.add_argument('--no-gif', action='store_true')
+    parser.add_argument('--tag',    default='',
+                        help="filename prefix for outputs, e.g. 'movingmnist_' "
+                             "→ movingmnist_sample.gif (avoids clobbering other runs)")
     # Optional architecture overrides — must match the trained checkpoint
     parser.add_argument('--num_frames', type=int, default=None)
     parser.add_argument('--frame_size', type=int, default=None)
     parser.add_argument('--in_channels', type=int, default=None)
+    parser.add_argument('--cond_features', type=int, default=None,
+                        help='conditioning dim of the checkpoint; 0 for an '
+                             'unconditional model (e.g. the MovingMNIST run). '
+                             'Must match training or the state_dict will not load.')
     args = parser.parse_args()
     overrides = {
-        'num_frames':  args.num_frames,
-        'frame_size':  args.frame_size,
-        'in_channels': args.in_channels,
+        'num_frames':    args.num_frames,
+        'frame_size':    args.frame_size,
+        'in_channels':   args.in_channels,
+        'cond_features': args.cond_features,
     }
-    sample(args.ckpt, args.cfg, args.n, not args.no_gif, overrides)
+    sample(args.ckpt, args.cfg, args.n, not args.no_gif, overrides, tag=args.tag)

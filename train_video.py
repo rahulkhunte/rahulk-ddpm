@@ -52,7 +52,7 @@ def build_model(vcfg, time_dim, device):
     ).to(device)
 
 
-def train(cfg_path: str = 'config.yaml', overrides: dict = None):
+def train(cfg_path: str = 'config.yaml', overrides: dict = None, resume: str = ''):
     with open(cfg_path) as f:
         cfg = yaml.safe_load(f)
 
@@ -92,6 +92,24 @@ def train(cfg_path: str = 'config.yaml', overrides: dict = None):
     n_params = sum(p.numel() for p in model.parameters())
     print(f"VideoDiT params: {n_params/1e6:.2f}M", flush=True)
 
+    # ── Resume from checkpoint (model + ema + optimizer + epoch + losses) ────────
+    # Mirrors train.py: lets a run pick up exactly where a previous one stopped,
+    # so a Modal timeout becomes a non-event — relaunch with the same --resume
+    # path and it continues. Resume checkpoints are the dicts saved below.
+    start_epoch = 0
+    losses      = []
+    if resume and os.path.exists(resume):
+        print(f"Resuming from: {resume}", flush=True)
+        ckpt = torch.load(resume, map_location=device)
+        model.load_state_dict(ckpt['model_state_dict'])
+        ema.get_model().load_state_dict(ckpt['ema_state_dict'])
+        optimizer.load_state_dict(ckpt['optimizer_state_dict'])
+        start_epoch = ckpt['epoch']
+        losses      = ckpt.get('losses', [])
+        print(f"Resumed at epoch {start_epoch}, loss history: {len(losses)} entries", flush=True)
+    elif resume:
+        print(f"⚠️  Resume path not found: {resume} — starting fresh", flush=True)
+
     # ── Training loop ────────────────────────────────────────────────────────────
     epochs    = vcfg.get('epochs', 5)
     save_every = vcfg.get('save_every', 1)
@@ -110,9 +128,8 @@ def train(cfg_path: str = 'config.yaml', overrides: dict = None):
         print(f"Loss weighting: min-SNR-gamma (gamma={min_snr_gamma})", flush=True)
     elif t_weighting:
         print(f"Loss t-weighting ON  (lambda={t_weight_lambda}, low-t emphasised)", flush=True)
-    losses    = []
 
-    for epoch in range(epochs):
+    for epoch in range(start_epoch, epochs):
         model.train()
         epoch_loss = 0.0
 
@@ -154,8 +171,19 @@ def train(cfg_path: str = 'config.yaml', overrides: dict = None):
         print(f"Epoch [{epoch+1:3d}/{epochs}] Loss: {avg:.4f}  (EMA active)", flush=True)
 
         if (epoch + 1) % save_every == 0:
+            # Lightweight inference-only checkpoints (model + EMA weights).
             torch.save(model.state_dict(),           f"{ckpt_dir}video_dit_epoch_{epoch+1}.pth")
             torch.save(ema.get_model().state_dict(), f"{ckpt_dir}video_dit_ema_epoch_{epoch+1}.pth")
+            # Full resume checkpoint (model + ema + optimizer + epoch + history),
+            # so a relaunch with --resume continues exactly here. Mirrors train.py.
+            torch.save({
+                'epoch':                epoch + 1,
+                'model_state_dict':     model.state_dict(),
+                'ema_state_dict':       ema.get_model().state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'losses':               losses,
+                'config':               {'cfg': cfg, 'vcfg': vcfg},
+            }, f"{ckpt_dir}resume_epoch_{epoch+1}.pth")
             ema.get_model().eval()
             _save_video_samples(ema.get_model(), scheduler, device, cfg, vcfg,
                                 sample_dir, epoch + 1)
@@ -219,6 +247,9 @@ if __name__ == '__main__':
     parser.add_argument('--cond_features', type=int, default=None,
                         help='label-conditioning dim; 0 = unconditional')
     parser.add_argument('--data_root',   default=None, help='dataset root (e.g. a persisted volume path)')
+    parser.add_argument('--resume',      default='',
+                        help='path to a resume_epoch_*.pth checkpoint to continue from '
+                             '(model + ema + optimizer + epoch + losses)')
     parser.add_argument('--min_snr_gamma', type=float, default=None,
                         help='min-SNR-gamma loss weighting (e.g. 5); emphasises high-t')
     parser.add_argument('--loss_t_weighting', dest='loss_t_weighting',
@@ -240,4 +271,4 @@ if __name__ == '__main__':
         'cond_features': args.cond_features,
         'data_root':   args.data_root,
     }
-    train(args.cfg, overrides)
+    train(args.cfg, overrides, resume=args.resume)

@@ -41,6 +41,14 @@ Ground truth (even rows) vs generated-from-noise (odd rows) — 16 frames each:
 
 Getting structure to nucleate from pure noise required fixing the reverse sampler: at the top of the chain `β_t≈0.999` makes `1/√α_t≈31×`, which amplifies any DC bias in the ε prediction into a saturated constant field. Reconstructing and **clamping x̂₀ each step** (static thresholding, `scheduler/noise_scheduler.py`) removes the collapse. See [`train_video.py`](train_video.py) / [`sample_video.py`](sample_video.py).
 
+**Generalizing to real data — MovingMNIST.** With the sampler fixed, the same 7M-param VideoDiT was trained **unconditionally** (no labels — MovingMNIST exposes none) on MovingMNIST and samples moving digit-strokes from pure noise without collapsing — the sampler fix carries over from the synthetic square to real video:
+
+| Generated clip (gif) | Four clips × 16 frames |
+|:--------------------:|:----------------------:|
+| ![mmnist](assets/demo/videodit_movingmnist_sample.gif) | ![mmnist-grid](assets/demo/videodit_movingmnist_grid.png) |
+
+The strokes are blobby rather than crisp digits — a model-capacity / resolution ceiling at this scale, not a collapse. Sharper output is a known next step (smaller `patch_size`, factorized spatial+temporal attention to keep it affordable under the current full O(N²) attention). Training supports `--resume` (model + EMA + optimizer + epoch + losses) so a run survives a GPU-host timeout.
+
 ### Pedagogy Worked Example
 A small from-scratch pedagogy artifact pipeline is also included for rendering clean instructional outputs as reusable assets.
 
