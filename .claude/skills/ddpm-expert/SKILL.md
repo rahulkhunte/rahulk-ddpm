@@ -8,15 +8,15 @@ description: >
   the reparameterization trick, ELBO / Lsimple loss, sampling loops (Algorithm 2),
   FID evaluation, temporal attention for video, or extending image diffusion to
   video for a pedagogy/text-to-video model. Also use when working on the
-  rahulk-ddpm repository or the Zulense Z1 Imagination Engine. This skill encodes
-  the exact conventions, file structure, and architectural decisions used in
-  rahulk-ddpm so generated code matches the existing codebase.
+  rahulk-ddpm repository or any video-diffusion / text-to-video / pedagogy work.
+  This skill encodes the exact conventions, file structure, and architectural
+  decisions used in rahulk-ddpm so generated code matches the existing codebase.
 ---
 
 # DDPM Expert
 
 This skill makes Claude a precise collaborator on diffusion-model work, matched to
-the conventions of the `rahulk-ddpm` repository and the Z1 video-pedagogy goal.
+the conventions of the `rahulk-ddpm` repository and its video-pedagogy goal.
 
 ## Operating principles
 
@@ -97,12 +97,12 @@ DiT block (latent space, scales to 675M — Peebles & Xie 2023):
   block: x → AdaLN → MHA → +res → AdaLN → MLP(GELU,4×) → +res
   conditioning via AdaLN, NOT cross-attention (cheaper, equally effective)
 
-Full modern pipeline (Z1 target):
+Full modern pipeline (video-pedagogy target):
   Image/frame → VAE encoder → latent z → patchify → DiT blocks → unpatchify
               → VAE decoder → output
 ```
 
-## Video diffusion extension (current frontier for Z1)
+## Video diffusion extension (current frontier)
 
 ```
 Goal: extend image diffusion → temporally consistent video.
@@ -127,9 +127,10 @@ Key papers to ground video work:
   Peebles & Xie 2023 — DiT (transformer backbone)                       arxiv 2212.09748
   Sora technical report 2024 — spacetime patches, DiT at scale
 
-Z1-specific framing (pedagogy / NCERT text-to-video):
-  - text/content hallucination is solved at the CONTENT layer (retrieval/grounding),
-    stroke/visual hallucination at the RENDERING layer (the diffusion model)
+General principle for text-to-video pedagogy models:
+  - separate the CONTENT/grounding layer from the VISUAL/rendering layer:
+    factual / textual correctness belongs to the content layer (retrieval/grounding),
+    while stroke/visual fidelity belongs to the rendering layer (the diffusion model)
   - AdaLN can inject stroke/glyph conditioning the same way it injects timestep
   - keep these two concerns separate when reasoning about the system
 ```
